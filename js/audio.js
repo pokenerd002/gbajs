@@ -4,7 +4,7 @@ function GameBoyAdvanceAudio() {
 		var self = this;
 		this.context = new AudioContext();
 		this.bufferSize = 0;
-		this.bufferSize = 8192;
+		this.bufferSize = 16384;
 		this.maxSamples = this.bufferSize << 2;
 		this.buffers = [new Float32Array(this.maxSamples), new Float32Array(this.maxSamples)];
 		this.sampleMask = this.maxSamples - 1;
