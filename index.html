@@ -58,6 +58,7 @@
     <div>
       <button id="exportBtn">Export save</button>
       <button id="resetBtn">Reset game</button>
+      <button id="speedBtn">Speed: 1x</button>
     </div>
 
     <div id="msg">Loading BIOS...</div>
@@ -78,6 +79,8 @@
     var romInput = document.getElementById("rom");
     var emu = null;
     var currentFile = null;
+    var running = false;
+    var speed = 1;
 
     if (window.__errors.length) errBox.textContent = window.__errors.join("\n");
 
@@ -129,6 +132,7 @@
 
     // Load ROM
     function startRom(file) {
+      running = false;
       resumeAudio();
       try { emu.pause(); } catch (err) {}
       emu.reset();
@@ -136,6 +140,7 @@
         if (ok) {
           currentFile = file;
           emu.runStable();
+          running = true;
           resumeAudio();
           msg.textContent = "Playing: " + file.name;
         } else {
@@ -175,6 +180,21 @@
     document.getElementById("resetBtn").addEventListener("click", function () {
       if (currentFile) startRom(currentFile);
       else msg.textContent = "Load a ROM first.";
+    });
+
+    // Speed button: runs extra frames on top of the normal ones
+    setInterval(function () {
+      if (speed > 1 && running && !emu.paused) {
+        try {
+          for (var i = 1; i < speed; i++) emu.advanceFrame();
+        } catch (err) {}
+      }
+    }, 16);
+
+    document.getElementById("speedBtn").addEventListener("click", function () {
+      speed = speed >= 4 ? 1 : speed + 1;
+      this.textContent = "Speed: " + speed + "x";
+      this.blur();
     });
   })();
   </script>
