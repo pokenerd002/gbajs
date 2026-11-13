@@ -11,7 +11,21 @@
     #wrap { width:240px; height:160px; margin:0 auto; transform-origin:top center; }
     canvas { width:240px; height:160px; display:block; image-rendering:pixelated; background:#000; }
     #msg { font-size:14px; opacity:.7; padding:6px; }
+    #err { color:#ff8080; font-size:13px; padding:6px; white-space:pre-wrap; }
   </style>
+
+  <script>
+    // Shows any script error or missing file on the page itself
+    window.__errors = [];
+    window.addEventListener("error", function (e) {
+      var text = e.target && e.target.src
+        ? "Failed to load: " + e.target.src
+        : "Error: " + e.message + " (line " + e.lineno + ")";
+      window.__errors.push(text);
+      var box = document.getElementById("err");
+      if (box) box.textContent = window.__errors.join("\n");
+    }, true);
+  </script>
 
   <script src="resources/xhr.js"></script>
   <script src="js/util.js"></script>
@@ -35,52 +49,78 @@
   <div id="bar">
     <input type="file" id="rom" accept=".gba,.bin">
     <div id="msg">Loading BIOS...</div>
+    <div id="err"></div>
   </div>
   <div id="holder"><div id="wrap">
     <canvas id="screen" width="240" height="160"></canvas>
   </div></div>
 
   <script>
-    const msg = document.getElementById("msg");
-    const canvas = document.getElementById("screen");
-    let gba;
+  (function () {
+    var msg = document.getElementById("msg");
+    var errBox = document.getElementById("err");
+    var canvas = document.getElementById("screen");
+    var wrap = document.getElementById("wrap");
+    var holder = document.getElementById("holder");
+    var romInput = document.getElementById("rom");
+    var emu = null;
 
+    if (window.__errors.length) errBox.textContent = window.__errors.join("\n");
+
+    // Screen scaling
+    function fit() {
+      var s = Math.min(window.innerWidth / 240, 3);
+      wrap.style.transform = "scale(" + s + ")";
+      holder.style.height = (160 * s) + "px";
+    }
+    fit();
+    window.addEventListener("resize", fit);
+
+    // Audio unlock
+    function resumeAudio() {
+      try {
+        if (emu && emu.audio && emu.audio.context && emu.audio.context.state === "suspended") {
+          emu.audio.context.resume();
+        }
+      } catch (err) {}
+    }
+    ["click", "touchstart", "keydown"].forEach(function (ev) {
+      document.addEventListener(ev, resumeAudio);
+    });
+
+    // Start emulator
     try {
-      gba = new GameBoyAdvance();
-      gba.logLevel = gba.LOG_ERROR;
-      gba.setCanvas(canvas);
+      emu = new GameBoyAdvance();
+      emu.logLevel = emu.LOG_ERROR;
+      emu.setCanvas(canvas);
     } catch (err) {
       msg.textContent = "Emulator failed to start: " + err.message;
+      return;
     }
 
+    // Load BIOS
     fetch("resources/bios.bin")
-      .then(r => {
+      .then(function (r) {
         if (!r.ok) throw new Error("bios.bin not found");
         return r.arrayBuffer();
       })
-      .then(buf => {
-        gba.setBios(buf);
+      .then(function (buf) {
+        emu.setBios(buf);
         msg.textContent = "Pick a .gba file to play. Keys: arrows, Z=B, X=A, A=L, S=R, Enter=Start, Backspace=Select";
       })
-      .catch(err => { msg.textContent = "BIOS error: " + err.message; });
+      .catch(function (err) {
+        msg.textContent = "BIOS error: " + err.message;
+      });
 
-    function resumeAudio() {
-      try {
-        if (gba && gba.audio && gba.audio.context && gba.audio.context.state === "suspended") {
-          gba.audio.context.resume();
-        }
-      } catch (err) { console.log("Audio resume failed:", err); }
-    }
-
-    document.getElementById("rom").addEventListener("change", e => {
-      const file = e.target.files[0];
-      if (!file || !gba) return;
-
+    // Load ROM
+    romInput.addEventListener("change", function (e) {
+      var file = e.target.files[0];
+      if (!file) return;
       resumeAudio();
-      gba.reset();
-      gba.loadRomFromFile(file, ok => {
+      emu.reset();
+      emu.loadRomFromFile(file, function (ok) {
         if (ok) {
-          gba.runStable();
+          emu.runStable();
           resumeAudio();
           msg.textContent = "Playing: " + file.name;
         } else {
@@ -88,20 +128,7 @@
         }
       });
     });
-
-    ["click", "touchstart", "keydown"].forEach(ev =>
-      document.addEventListener(ev, resumeAudio)
-    );
-
-    const wrap = document.getElementById("wrap");
-    const holder = document.getElementById("holder");
-    function fit() {
-      const s = Math.min(window.innerWidth / 240, 3);
-      wrap.style.transform = "scale(" + s + ")";
-      holder.style.height = (160 * s) + "px";
-    }
-    fit();
-    window.addEventListener("resize", fit);
+  })();
   </script>
 </body>
 </html>
