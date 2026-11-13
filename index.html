@@ -100,6 +100,16 @@ function fit() {
   holder.style.height = (160 * s) + "px";
 }
 fit();
+["click", "touchstart", "keydown"].forEach(ev =>
+  document.addEventListener(ev, () => {
+    try {
+      if (gba && gba.audio && gba.audio.context && gba.audio.context.state === "suspended") {
+        gba.audio.context.resume();
+      }
+    } catch (err) {}
+  })
+);
+
 window.addEventListener("resize", fit);
   </script>
 </body>
