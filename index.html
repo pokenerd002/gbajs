@@ -1,534 +1,876 @@
 
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>GBA Emulator</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Neon GBA | Game Center</title>
 
-  <style>
-    body {
-      margin: 0;
-      background: #111;
-      color: #eee;
-      font-family: sans-serif;
-      text-align: center;
-    }
+<style>
+:root {
+  --bg: #090914;
+  --panel: #121225;
+  --panel2: #191932;
+  --purple: #a855f7;
+  --blue: #38bdf8;
+  --text: #f4f2ff;
+  --muted: #9999b8;
+  --border: rgba(168,85,247,.25);
+}
 
-    #bar {
-      padding: 12px;
-    }
+* {
+  box-sizing: border-box;
+}
 
-    #bar > div {
-      margin: 6px 0;
-    }
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse at top left, #241044 0, transparent 45%),
+    radial-gradient(ellipse at top right, #10213e 0, transparent 45%),
+    var(--bg);
+  color: var(--text);
+  font-family: Arial, sans-serif;
+}
 
-    #holder {
-      width: 100%;
-    }
+button, input {
+  font: inherit;
+}
 
-    #wrap {
-      width: 240px;
-      height: 160px;
-      margin: 0 auto;
-      transform-origin: top center;
-    }
+button {
+  cursor: pointer;
+}
 
-    canvas {
-      width: 240px;
-      height: 160px;
-      display: block;
-      image-rendering: pixelated;
-      background: #000;
-    }
+header {
+  padding: 22px 5%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(9,9,20,.8);
+}
 
-    #msg {
-      font-size: 14px;
-      opacity: .7;
-      padding: 6px;
-    }
+.logo {
+  font-size: 23px;
+  font-weight: 900;
+  letter-spacing: 2px;
+}
 
-    #err {
-      color: #ff8080;
-      font-size: 13px;
-      padding: 6px;
-      white-space: pre-wrap;
-    }
+.logo span {
+  color: var(--purple);
+}
 
-    button {
-      padding: 8px 12px;
-      cursor: pointer;
-    }
+.header-status {
+  color: var(--blue);
+  font-size: 12px;
+  letter-spacing: 1px;
+}
 
-    /* FULLSCREEN SETTINGS */
+.container {
+  width: min(1200px, 94%);
+  margin: 30px auto;
+}
 
-    #holder:fullscreen {
-      position: fixed;
-      inset: 0;
+.section-title {
+  font-size: 19px;
+  margin: 0 0 16px;
+}
 
-      width: 100vw;
-      height: 100vh !important;
+.panel {
+  background: rgba(18,18,37,.94);
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  padding: 20px;
+  box-shadow: 0 8px 35px rgba(0,0,0,.25);
+}
 
-      background: #000;
+.main-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 20px;
+  align-items: start;
+}
 
-      display: flex;
-      justify-content: center;
-      align-items: center;
+.game-panel {
+  min-width: 0;
+}
 
-      overflow: hidden;
-    }
+.game-stage {
+  width: 100%;
+  min-height: 300px;
+  padding: 25px 12px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background:
+    radial-gradient(ellipse, #252044 0%, #111121 65%, #090914 100%);
+  border-radius: 13px;
+  overflow: hidden;
+}
 
-    #holder:fullscreen #wrap {
-      width: min(100vw, 150vh);
-      height: auto;
+#gameFrame {
+  width: min(720px, 100%);
+  aspect-ratio: 3 / 2;
+  padding: 10px;
+  border-radius: 13px;
+  background: linear-gradient(135deg, #34304c, #151526);
+  border: 2px solid #554078;
+  box-shadow:
+    0 0 12px rgba(168,85,247,.5),
+    0 0 35px rgba(56,189,248,.15);
+}
 
-      aspect-ratio: 3 / 2;
+#screen {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
 
-      margin: 0;
+#gameStage:fullscreen {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  background: #000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  border-radius: 0;
+}
 
-      transform: none !important;
+#gameStage:fullscreen #gameFrame {
+  width: min(100vw, 150vh);
+  height: auto;
+  aspect-ratio: 3 / 2;
+  padding: 8px;
+  flex: none;
+  margin: 0;
+  border-radius: 0;
+}
 
-      flex: none;
-    }
+#gameStage:fullscreen #screen {
+  width: 100%;
+  height: 100%;
+}
 
-    #holder:fullscreen canvas {
-      width: 100%;
-      height: 100%;
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 17px;
+}
 
-      display: block;
+.btn {
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 11px 15px;
+  color: white;
+  background: var(--panel2);
+  transition: .2s;
+}
 
-      image-rendering: pixelated;
-    }
+.btn:hover {
+  border-color: var(--blue);
+  box-shadow: 0 0 12px rgba(56,189,248,.25);
+  transform: translateY(-1px);
+}
 
-  </style>
+.btn-primary {
+  background: linear-gradient(110deg, #8134d5, #455be9);
+  border: none;
+}
 
-  <script>
-    window.__errors = [];
+.btn-blue {
+  background: linear-gradient(110deg, #1768a8, #3449c5);
+  border: none;
+}
 
-    window.addEventListener("error", function (e) {
+.btn-danger {
+  background: #48202e;
+  border-color: #a04465;
+}
 
-      var text = e.target && e.target.src
-        ? "Failed to load: " + e.target.src
-        : "Error: " + e.message + " (line " + e.lineno + ")";
+.btn-purple {
+  background: #301b50;
+  border-color: #7742ad;
+}
 
-      window.__errors.push(text);
+.status {
+  color: var(--muted);
+  font-size: 13px;
+  min-height: 20px;
+  margin-top: 13px;
+  overflow-wrap: anywhere;
+}
 
-      var box = document.getElementById("err");
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 17px;
+}
 
-      if (box) {
-        box.textContent = window.__errors.join("\n");
-      }
+.library-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  max-height: 300px;
+  overflow-y: auto;
+}
 
-    }, true);
-  </script>
+.library-item {
+  width: 100%;
+  text-align: left;
+  background: #1a1931;
+  border: 1px solid var(--border);
+  color: white;
+  border-radius: 9px;
+  padding: 12px;
+  overflow-wrap: anywhere;
+}
 
-  <!-- EMULATOR FILES -->
+.library-item:hover {
+  border-color: var(--blue);
+  background: #242044;
+}
 
-  <script src="resources/xhr.js"></script>
-  <script src="js/util.js"></script>
-  <script src="js/core.js"></script>
-  <script src="js/arm.js"></script>
-  <script src="js/thumb.js"></script>
-  <script src="js/mmu.js"></script>
-  <script src="js/io.js"></script>
-  <script src="js/audio.js"></script>
-  <script src="js/video.js"></script>
-  <script src="js/video/proxy.js"></script>
-  <script src="js/video/software.js"></script>
-  <script src="js/irq.js"></script>
-  <script src="js/keypad.js"></script>
-  <script src="js/sio.js"></script>
-  <script src="js/savedata.js"></script>
-  <script src="js/gpio.js"></script>
-  <script src="js/gba.js"></script>
+.library-item.active {
+  border-color: var(--purple);
+  box-shadow: 0 0 12px rgba(168,85,247,.2);
+}
+
+.library-item small {
+  display: block;
+  color: var(--muted);
+  margin-top: 5px;
+}
+
+.empty {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.file-input {
+  display: none;
+}
+
+.file-label {
+  display: block;
+  text-align: center;
+  width: 100%;
+  margin-top: 12px;
+}
+
+.tool-group {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.tool-group .btn {
+  width: 100%;
+  text-align: center;
+}
+
+.info-label {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.game-name {
+  font-size: 17px;
+  font-weight: bold;
+  margin-top: 7px;
+  overflow-wrap: anywhere;
+}
+
+footer {
+  text-align: center;
+  padding: 25px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+@media(max-width: 800px) {
+  .main-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+
+  header {
+    padding: 17px 4%;
+  }
+}
+
+@media(max-width: 480px) {
+  .controls {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .controls .btn {
+    width: 100%;
+  }
+
+  .panel {
+    padding: 13px;
+  }
+
+  .game-stage {
+    min-height: 200px;
+    padding: 12px 5px;
+  }
+
+  .logo {
+    font-size: 18px;
+  }
+}
+</style>
+
+<!-- Emulator scripts -->
+<script>
+window.__errors = [];
+
+window.addEventListener("error", function(e) {
+  var text = e.target && e.target.src
+    ? "Failed to load: " + e.target.src
+    : "Error: " + e.message + " (line " + e.lineno + ")";
+
+  window.__errors.push(text);
+
+  var box = document.getElementById("err");
+  if (box) box.textContent = window.__errors.join("\n");
+}, true);
+</script>
+
+<script src="resources/xhr.js"></script>
+<script src="js/util.js"></script>
+<script src="js/core.js"></script>
+<script src="js/arm.js"></script>
+<script src="js/thumb.js"></script>
+<script src="js/mmu.js"></script>
+<script src="js/io.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/video.js"></script>
+<script src="js/video/proxy.js"></script>
+<script src="js/video/software.js"></script>
+<script src="js/irq.js"></script>
+<script src="js/keypad.js"></script>
+<script src="js/sio.js"></script>
+<script src="js/savedata.js"></script>
+<script src="js/gpio.js"></script>
+<script src="js/gba.js"></script>
 
 </head>
 
 <body>
 
-  <div id="bar">
+<header>
+  <div class="logo">NEON <span>GBA</span></div>
+  <div class="header-status">● EMULATOR CENTER</div>
+</header>
 
-    <div>
-      <label>
-        ROM:
-        <input type="file" id="rom" accept=".gba,.bin">
-      </label>
-    </div>
+<main class="container">
 
-    <div>
-      <label>
-        Import save (.sav):
-        <input type="file" id="importSave" accept=".sav,.sa1,.bin">
-      </label>
-    </div>
+  <div class="main-layout">
 
-    <div>
-      <button id="exportBtn">Export save</button>
-      <button id="resetBtn">Reset game</button>
-      <button id="speedBtn">Speed: 1x</button>
-      <button id="fullscreenBtn">Fullscreen</button>
-    </div>
+    <!-- GAME SCREEN -->
 
-    <div id="msg">Loading BIOS...</div>
+    <section class="panel game-panel">
 
-    <div id="err"></div>
+      <h2 class="section-title">Your Game</h2>
+
+      <div class="game-stage" id="gameStage">
+        <div id="gameFrame">
+          <canvas id="screen" width="240" height="160"></canvas>
+        </div>
+      </div>
+
+      <div class="controls">
+
+        <button class="btn btn-primary" id="fullscreenBtn">
+          ⛶ Fullscreen
+        </button>
+
+        <button class="btn btn-blue" id="resetBtn">
+          ↻ Reset
+        </button>
+
+        <button class="btn btn-purple" id="speedBtn">
+          ⚡ Speed: 1x
+        </button>
+
+      </div>
+
+      <div class="status" id="msg">
+        Loading BIOS...
+      </div>
+
+      <div id="err" class="status" style="color:#ff8080"></div>
+
+    </section>
+
+    <!-- SIDEBAR -->
+
+    <aside class="sidebar">
+
+      <!-- GAME LIBRARY -->
+
+      <section class="panel">
+
+        <h2 class="section-title">🎮 Game Library</h2>
+
+        <div class="library-list" id="libraryList">
+          <div class="empty">
+            Your library is empty.<br>
+            Add a GBA game to get started.
+          </div>
+        </div>
+
+        <label class="btn btn-primary file-label" for="rom">
+          + Add Game
+        </label>
+
+        <input
+          type="file"
+          id="rom"
+          class="file-input"
+          accept=".gba,.bin"
+        >
+
+      </section>
+
+      <!-- GAME INFORMATION -->
+
+      <section class="panel">
+
+        <div class="info-label">Currently Playing</div>
+
+        <div class="game-name" id="gameName">
+          No game loaded
+        </div>
+
+        <div class="status">
+          Game Boy Advance Emulator
+        </div>
+
+      </section>
+
+      <!-- SAVE MANAGEMENT -->
+
+      <section class="panel">
+
+        <h2 class="section-title">💾 Save Management</h2>
+
+        <div class="tool-group">
+
+          <label class="btn file-label" for="importSave">
+            ↑ Import Save
+          </label>
+
+          <input
+            type="file"
+            id="importSave"
+            class="file-input"
+            accept=".sav,.sa1,.bin"
+          >
+
+          <button class="btn btn-blue" id="exportBtn">
+            ↓ Export Save
+          </button>
+
+        </div>
+
+        <div class="status" id="saveMsg">
+          Import or export your game saves.
+        </div>
+
+      </section>
+
+    </aside>
 
   </div>
 
-  <!-- GAME SCREEN -->
+</main>
 
-  <div id="holder">
+<footer>
+  NEON GBA · Game Boy Advance Emulator
+</footer>
 
-    <div id="wrap">
-      <canvas id="screen" width="240" height="160"></canvas>
-    </div>
+<script>
+(function() {
 
-  </div>
+  var msg = document.getElementById("msg");
+  var errBox = document.getElementById("err");
+  var canvas = document.getElementById("screen");
+  var stage = document.getElementById("gameStage");
+  var romInput = document.getElementById("rom");
 
-  <script>
+  var libraryList = document.getElementById("libraryList");
+  var gameName = document.getElementById("gameName");
+  var saveMsg = document.getElementById("saveMsg");
 
-  (function () {
+  var emu = null;
+  var currentFile = null;
+  var running = false;
+  var speed = 1;
+  var biosReady = false;
 
-    var msg = document.getElementById("msg");
-    var errBox = document.getElementById("err");
-    var canvas = document.getElementById("screen");
-    var wrap = document.getElementById("wrap");
-    var holder = document.getElementById("holder");
-    var romInput = document.getElementById("rom");
+  // Session game library
+  var games = [];
 
-    var emu = null;
-    var currentFile = null;
-    var running = false;
-    var speed = 1;
+  if (window.__errors.length) {
+    errBox.textContent = window.__errors.join("\n");
+  }
 
-    if (window.__errors.length) {
-      errBox.textContent = window.__errors.join("\n");
-    }
+  // AUDIO UNLOCK
 
-    // SCREEN SCALING
-
-    function fit() {
-
-      if (document.fullscreenElement === holder) {
-
-        // Fullscreen uses CSS centering.
-        // Do not apply JavaScript scaling here.
-
-        wrap.style.transform = "none";
-        wrap.style.width = "";
-        wrap.style.height = "";
-
-        holder.style.height = "100vh";
-
-      } else {
-
-        // Normal screen sizing
-
-        wrap.style.width = "240px";
-        wrap.style.height = "160px";
-
-        var s = Math.min(window.innerWidth / 240, 3);
-
-        wrap.style.transform = "scale(" + s + ")";
-
-        holder.style.height = (160 * s) + "px";
-
-      }
-
-    }
-
-    fit();
-
-    window.addEventListener("resize", fit);
-
-    // FULLSCREEN BUTTON
-
-    var fullscreenBtn = document.getElementById("fullscreenBtn");
-
-    fullscreenBtn.addEventListener("click", function () {
-
-      if (!document.fullscreenElement) {
-
-        holder.requestFullscreen().catch(function (err) {
-
-          msg.textContent = "Fullscreen error: " + err.message;
-
-        });
-
-      } else {
-
-        document.exitFullscreen();
-
-      }
-
-    });
-
-    // FULLSCREEN CHANGE DETECTION
-
-    document.addEventListener("fullscreenchange", function () {
-
-      if (document.fullscreenElement === holder) {
-
-        fullscreenBtn.textContent = "Exit Fullscreen";
-
-      } else {
-
-        fullscreenBtn.textContent = "Fullscreen";
-
-      }
-
-      fit();
-
-    });
-
-    // AUDIO UNLOCK
-
-    function resumeAudio() {
-
-      try {
-
-        if (
-          emu &&
-          emu.audio &&
-          emu.audio.context &&
-          emu.audio.context.state === "suspended"
-        ) {
-
-          emu.audio.context.resume();
-
-        }
-
-      } catch (err) {}
-
-    }
-
-    ["click", "touchstart", "keydown"].forEach(function (ev) {
-
-      document.addEventListener(ev, resumeAudio);
-
-    });
-
-    // START EMULATOR
-
+  function resumeAudio() {
     try {
+      if (
+        emu &&
+        emu.audio &&
+        emu.audio.context &&
+        emu.audio.context.state === "suspended"
+      ) {
+        emu.audio.context.resume();
+      }
+    } catch (err) {}
+  }
 
-      emu = new GameBoyAdvance();
+  ["click", "touchstart", "keydown"].forEach(function(ev) {
+    document.addEventListener(ev, resumeAudio);
+  });
 
-      emu.logLevel = emu.LOG_ERROR;
+  // FULLSCREEN
 
-      emu.setCanvas(canvas);
+  var fullscreenBtn = document.getElementById("fullscreenBtn");
 
-      emu.keypad.KEYCODE_SELECT = 16;
+  fullscreenBtn.addEventListener("click", function() {
 
-    } catch (err) {
+    if (!document.fullscreenElement) {
 
-      msg.textContent = "Emulator failed to start: " + err.message;
+      if (stage.requestFullscreen) {
+        stage.requestFullscreen().catch(function(err) {
+          msg.textContent = "Fullscreen error: " + err.message;
+        });
+      } else {
+        msg.textContent = "Fullscreen is not supported by this browser.";
+      }
 
+    } else {
+
+      document.exitFullscreen();
+
+    }
+
+  });
+
+  document.addEventListener("fullscreenchange", function() {
+
+    fullscreenBtn.textContent =
+      document.fullscreenElement === stage
+        ? "✕ Exit Fullscreen"
+        : "⛶ Fullscreen";
+
+  });
+
+  // START EMULATOR
+
+  try {
+
+    emu = new GameBoyAdvance();
+
+    emu.logLevel = emu.LOG_ERROR;
+
+    emu.setCanvas(canvas);
+
+    emu.keypad.KEYCODE_SELECT = 16;
+
+  } catch(err) {
+
+    msg.textContent = "Emulator failed to start: " + err.message;
+    return;
+
+  }
+
+  // LOAD BIOS
+
+  fetch("resources/bios.bin")
+
+    .then(function(r) {
+
+      if (!r.ok) {
+        throw new Error("bios.bin not found");
+      }
+
+      return r.arrayBuffer();
+
+    })
+
+    .then(function(buf) {
+
+      emu.setBios(buf);
+
+      biosReady = true;
+
+      msg.textContent = "BIOS loaded. Add a GBA game to begin.";
+
+    })
+
+    .catch(function(err) {
+
+      msg.textContent = "BIOS error: " + err.message;
+
+    });
+
+  // GAME LIBRARY
+
+  function renderLibrary() {
+
+    libraryList.innerHTML = "";
+
+    if (games.length === 0) {
+
+      var empty = document.createElement("div");
+      empty.className = "empty";
+      empty.textContent = "Your library is empty. Add a GBA game to get started.";
+
+      libraryList.appendChild(empty);
       return;
 
     }
 
-    // LOAD BIOS
+    games.forEach(function(file) {
 
-    fetch("resources/bios.bin")
+      var item = document.createElement("button");
 
-      .then(function (r) {
+      item.className = "library-item";
 
-        if (!r.ok) {
-          throw new Error("bios.bin not found");
-        }
+      if (currentFile === file) {
+        item.classList.add("active");
+      }
 
-        return r.arrayBuffer();
+      var title = document.createElement("strong");
+      title.textContent = file.name;
 
-      })
+      var subtitle = document.createElement("small");
+      subtitle.textContent =
+        (file.size / 1024).toFixed(1) + " KB · GBA ROM";
 
-      .then(function (buf) {
+      item.appendChild(title);
+      item.appendChild(subtitle);
 
-        emu.setBios(buf);
-
-        msg.textContent =
-          "Pick a .gba file to play. Keys: arrows, Z=A, X=B, A=L, S=R, Enter=Start, Shift=Select";
-
-      })
-
-      .catch(function (err) {
-
-        msg.textContent = "BIOS error: " + err.message;
-
+      item.addEventListener("click", function() {
+        startRom(file);
       });
 
-    // LOAD ROM
+      libraryList.appendChild(item);
 
-    function startRom(file) {
+    });
 
-      running = false;
+  }
 
-      resumeAudio();
+  // LOAD ROM
 
-      try {
-        emu.pause();
-      } catch (err) {}
+  function startRom(file) {
 
-      emu.reset();
-
-      emu.loadRomFromFile(file, function (ok) {
-
-        if (ok) {
-
-          currentFile = file;
-
-          emu.runStable();
-
-          running = true;
-
-          resumeAudio();
-
-          msg.textContent = "Playing: " + file.name;
-
-        } else {
-
-          msg.textContent = "Could not load that ROM.";
-
-        }
-
-      });
-
+    if (!biosReady) {
+      msg.textContent = "Please wait for the BIOS to finish loading.";
+      return;
     }
 
-    romInput.addEventListener("change", function (e) {
+    running = false;
 
-      var file = e.target.files[0];
+    resumeAudio();
 
-      if (file) {
-        startRom(file);
+    try {
+      emu.pause();
+    } catch(err) {}
+
+    try {
+      emu.reset();
+    } catch(err) {}
+
+    msg.textContent = "Loading " + file.name + "...";
+
+    emu.loadRomFromFile(file, function(ok) {
+
+      if (ok) {
+
+        currentFile = file;
+
+        emu.runStable();
+
+        running = true;
+
+        resumeAudio();
+
+        gameName.textContent = file.name;
+
+        msg.textContent = "Playing: " + file.name;
+
+        renderLibrary();
+
+      } else {
+
+        msg.textContent = "Could not load that ROM.";
+
       }
 
     });
 
-    // IMPORT SAVE
+  }
 
-    document.getElementById("importSave")
-      .addEventListener("change", function (e) {
+  romInput.addEventListener("change", function(e) {
 
-        var file = e.target.files[0];
+    var file = e.target.files[0];
 
-        if (!file) return;
+    if (!file) return;
 
-        if (!emu.loadSavedataFromFile) {
+    var alreadyAdded = games.some(function(existing) {
+      return existing.name === file.name &&
+        existing.size === file.size;
+    });
 
-          msg.textContent = "This build can't import saves.";
+    if (!alreadyAdded) {
+      games.push(file);
+    }
 
-          return;
+    renderLibrary();
 
-        }
+    startRom(file);
 
-        emu.loadSavedataFromFile(file);
+    // Allow selecting the same file again
+    romInput.value = "";
 
-        msg.textContent =
-          "Save imported. If the game doesn't show it, press Reset game.";
+  });
 
-      });
+  // IMPORT SAVE
 
-    // EXPORT SAVE FILE AS .sav
+  document.getElementById("importSave")
+    .addEventListener("change", function(e) {
 
-    document.getElementById("exportBtn")
-      .addEventListener("click", function () {
+      var file = e.target.files[0];
 
-        if (!emu || !emu.mmu || !emu.mmu.save) {
-          msg.textContent = "No save data available.";
-          return;
-        }
+      if (!file) return;
 
-        var saveData = emu.mmu.save;
+      if (!emu.loadSavedataFromFile) {
 
-        // Get the save data
-        var data = saveData.buffer
-          ? new Uint8Array(
-              saveData.buffer,
-              saveData.byteOffset || 0,
-              saveData.byteLength || saveData.buffer.byteLength
-            )
-          : saveData;
+        saveMsg.textContent = "This build can't import saves.";
 
-        var blob = new Blob(
-          [data],
-          { type: "application/octet-stream" }
-        );
-
-        // Create a game-based filename
-        var filename = currentFile
-          ? currentFile.name.replace(/\.[^.]+$/, "") + ".sav"
-          : "game.sav";
-
-        // Download the file
-        var url = URL.createObjectURL(blob);
-
-        var link = document.createElement("a");
-        link.href = url;
-        link.download = filename;
-
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        setTimeout(function () {
-          URL.revokeObjectURL(url);
-        }, 1000);
-
-        msg.textContent = "Exported: " + filename;
-
-      });
-
-    // RESET GAME
-
-    document.getElementById("resetBtn")
-      .addEventListener("click", function () {
-
-        if (currentFile) {
-
-          startRom(currentFile);
-
-        } else {
-
-          msg.textContent = "Load a ROM first.";
-
-        }
-
-      });
-
-    // SPEED CONTROL
-
-    setInterval(function () {
-
-      if (speed > 1 && running && !emu.paused) {
-
-        try {
-
-          for (var i = 1; i < speed; i++) {
-            emu.advanceFrame();
-          }
-
-        } catch (err) {}
+        return;
 
       }
 
-    }, 16);
+      try {
 
-    document.getElementById("speedBtn")
-      .addEventListener("click", function () {
+        emu.loadSavedataFromFile(file);
 
-        speed = speed >= 4 ? 1 : speed + 1;
+        saveMsg.textContent = "Save imported: " + file.name;
 
-        this.textContent = "Speed: " + speed + "x";
+      } catch(err) {
 
-        this.blur();
+        saveMsg.textContent = "Save import failed: " + err.message;
 
-      });
+      }
 
-  })();
+      e.target.value = "";
 
-  </script>
+    });
+
+  // EXPORT SAVE
+  // Uses the emulator's built-in save-data exporter.
+
+  document.getElementById("exportBtn")
+    .addEventListener("click", function() {
+
+      if (!emu.downloadSavedata) {
+
+        saveMsg.textContent = "This build can't export saves.";
+
+        return;
+
+      }
+
+      try {
+
+        emu.downloadSavedata();
+
+        saveMsg.textContent =
+          "Save export requested. Check your Downloads folder.";
+
+      } catch(err) {
+
+        saveMsg.textContent =
+          "Save export failed: " + err.message;
+
+      }
+
+    });
+
+  // RESET GAME
+
+  document.getElementById("resetBtn")
+    .addEventListener("click", function() {
+
+      if (currentFile) {
+
+        startRom(currentFile);
+
+      } else {
+
+        msg.textContent = "Load a game first.";
+
+      }
+
+    });
+
+  // SPEED CONTROL
+
+  setInterval(function() {
+
+    if (speed > 1 && running && !emu.paused) {
+
+      try {
+
+        for (var i = 1; i < speed; i++) {
+          emu.advanceFrame();
+        }
+
+      } catch(err) {}
+
+    }
+
+  }, 16);
+
+  document.getElementById("speedBtn")
+    .addEventListener("click", function() {
+
+      speed = speed >= 4 ? 1 : speed + 1;
+
+      this.textContent = "⚡ Speed: " + speed + "x";
+
+      this.blur();
+
+    });
+
+})();
+</script>
 
 </body>
 </html>
