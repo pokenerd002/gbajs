@@ -7,16 +7,9 @@
   <style>
     body { margin:0; background:#111; color:#eee; font-family:sans-serif; text-align:center; }
     #bar { padding:12px; }
-    canvas {
-  width: 480px;          /* 2x the real size; try 360px or 240px for smaller */
-  max-width: 100%;
-  aspect-ratio: 3 / 2;   /* keeps the GBA's 240x160 shape */
-  height: auto;
-  image-rendering: pixelated;
-  background: #000;
-  display: block;
-  margin: 0 auto;
-}
+ #holder { width:100%; }
+#wrap { width:240px; height:160px; margin:0 auto; transform-origin:top center; }
+canvas { width:240px; height:160px; display:block; image-rendering:pixelated; background:#000; }
     #msg { font-size:14px; opacity:.7; padding:6px; }
   </style>
 
@@ -43,7 +36,9 @@
     <input type="file" id="rom" accept=".gba,.bin">
     <div id="msg">Loading BIOS...</div>
   </div>
+<div id="holder"><div id="wrap">
   <canvas id="screen" width="240" height="160"></canvas>
+</div></div>
 
   <script>
     const msg = document.getElementById("msg");
@@ -82,6 +77,15 @@
         }
       });
     });
+    const wrap = document.getElementById("wrap");
+const holder = document.getElementById("holder");
+function fit() {
+  const s = Math.min(window.innerWidth / 240, 3);
+  wrap.style.transform = "scale(" + s + ")";
+  holder.style.height = (160 * s) + "px";
+}
+fit();
+window.addEventListener("resize", fit);
   </script>
 </body>
 </html>
