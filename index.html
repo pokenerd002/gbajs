@@ -1,6 +1,7 @@
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -15,8 +16,13 @@
       text-align: center;
     }
 
-    #bar { padding: 12px; }
-    #bar > div { margin: 6px 0; }
+    #bar {
+      padding: 12px;
+    }
+
+    #bar > div {
+      margin: 6px 0;
+    }
 
     #holder {
       width: 100%;
@@ -55,38 +61,31 @@
       cursor: pointer;
     }
 
-    /* Fullscreen styling */
+    /* FULLSCREEN */
+
     #holder:fullscreen {
       background: #000;
       width: 100vw;
-      height: 100vh !important;
+      height: 100vh;
       display: flex;
       justify-content: center;
       align-items: center;
-    }
-
-    #holder:fullscreen #wrap {
-      margin: 0;
-    }
-
-    #holder:fullscreen canvas {
-      width: 100%;
-      height: 100%;
+      overflow: hidden;
     }
 
     #holder:fullscreen #wrap {
       width: min(100vw, 150vh);
-      height: min(66.6667vw, 100vh);
+      height: auto;
+      margin: 0;
+      transform: none !important;
     }
 
     #holder:fullscreen canvas {
       width: 100%;
-      height: 100%;
+      height: auto;
+      aspect-ratio: 3 / 2;
     }
 
-    #holder:fullscreen {
-      overflow: hidden;
-    }
   </style>
 
   <script>
@@ -100,7 +99,10 @@
       window.__errors.push(text);
 
       var box = document.getElementById("err");
-      if (box) box.textContent = window.__errors.join("\n");
+
+      if (box) {
+        box.textContent = window.__errors.join("\n");
+      }
     }, true);
   </script>
 
@@ -121,19 +123,23 @@
   <script src="js/savedata.js"></script>
   <script src="js/gpio.js"></script>
   <script src="js/gba.js"></script>
+
 </head>
 
 <body>
 
   <div id="bar">
+
     <div>
-      <label>ROM:
+      <label>
+        ROM:
         <input type="file" id="rom" accept=".gba,.bin">
       </label>
     </div>
 
     <div>
-      <label>Import save (.sav):
+      <label>
+        Import save (.sav):
         <input type="file" id="importSave" accept=".sav,.sa1,.bin">
       </label>
     </div>
@@ -146,16 +152,21 @@
     </div>
 
     <div id="msg">Loading BIOS...</div>
+
     <div id="err"></div>
+
   </div>
 
   <div id="holder">
+
     <div id="wrap">
       <canvas id="screen" width="240" height="160"></canvas>
     </div>
+
   </div>
 
   <script>
+
   (function () {
 
     var msg = document.getElementById("msg");
@@ -170,176 +181,280 @@
     var running = false;
     var speed = 1;
 
-    if (window.__errors.length)
+    if (window.__errors.length) {
       errBox.textContent = window.__errors.join("\n");
+    }
 
-    // Screen scaling
+    // SCREEN SCALING
+
     function fit() {
-      if (document.fullscreenElement === holder) {
-        var scale = Math.min(
-          window.innerWidth / 240,
-          window.innerHeight / 160
-        );
 
-        wrap.style.transform = "scale(" + scale + ")";
+      if (document.fullscreenElement === holder) {
+
+        wrap.style.width = "min(100vw, 150vh)";
+        wrap.style.height = "auto";
+        wrap.style.transform = "none";
+
+        holder.style.height = "100vh";
+
+      } else {
+
         wrap.style.width = "240px";
         wrap.style.height = "160px";
-        holder.style.height = "100vh";
-      } else {
+
         var s = Math.min(window.innerWidth / 240, 3);
 
         wrap.style.transform = "scale(" + s + ")";
+
         holder.style.height = (160 * s) + "px";
+
       }
+
     }
 
     fit();
 
     window.addEventListener("resize", fit);
 
-    // Fullscreen button
+    // FULLSCREEN BUTTON
+
     var fullscreenBtn = document.getElementById("fullscreenBtn");
 
     fullscreenBtn.addEventListener("click", function () {
 
       if (!document.fullscreenElement) {
+
         holder.requestFullscreen().catch(function (err) {
+
           msg.textContent = "Fullscreen error: " + err.message;
+
         });
+
       } else {
+
         document.exitFullscreen();
+
       }
 
     });
 
-    // Update button and scaling when fullscreen changes
+    // DETECT FULLSCREEN CHANGES
+
     document.addEventListener("fullscreenchange", function () {
 
       if (document.fullscreenElement === holder) {
+
         fullscreenBtn.textContent = "Exit Fullscreen";
+
       } else {
+
         fullscreenBtn.textContent = "Fullscreen";
+
       }
 
       fit();
 
     });
 
-    // Audio unlock
+    // AUDIO UNLOCK
+
     function resumeAudio() {
+
       try {
-        if (emu && emu.audio && emu.audio.context &&
-            emu.audio.context.state === "suspended") {
+
+        if (
+          emu &&
+          emu.audio &&
+          emu.audio.context &&
+          emu.audio.context.state === "suspended"
+        ) {
+
           emu.audio.context.resume();
+
         }
+
       } catch (err) {}
+
     }
 
     ["click", "touchstart", "keydown"].forEach(function (ev) {
+
       document.addEventListener(ev, resumeAudio);
+
     });
 
-    // Start emulator
+    // START EMULATOR
+
     try {
+
       emu = new GameBoyAdvance();
+
       emu.logLevel = emu.LOG_ERROR;
+
       emu.setCanvas(canvas);
+
       emu.keypad.KEYCODE_SELECT = 16;
+
     } catch (err) {
+
       msg.textContent = "Emulator failed to start: " + err.message;
+
       return;
+
     }
 
-    // Load BIOS
+    // LOAD BIOS
+
     fetch("resources/bios.bin")
+
       .then(function (r) {
-        if (!r.ok) throw new Error("bios.bin not found");
+
+        if (!r.ok) {
+          throw new Error("bios.bin not found");
+        }
+
         return r.arrayBuffer();
+
       })
+
       .then(function (buf) {
+
         emu.setBios(buf);
+
         msg.textContent =
           "Pick a .gba file to play. Keys: arrows, Z=A, X=B, A=L, S=R, Enter=Start, Shift=Select";
+
       })
+
       .catch(function (err) {
+
         msg.textContent = "BIOS error: " + err.message;
+
       });
 
-    // Load ROM
+    // LOAD ROM
+
     function startRom(file) {
+
       running = false;
+
       resumeAudio();
 
-      try { emu.pause(); } catch (err) {}
+      try {
+        emu.pause();
+      } catch (err) {}
 
       emu.reset();
 
       emu.loadRomFromFile(file, function (ok) {
+
         if (ok) {
+
           currentFile = file;
+
           emu.runStable();
+
           running = true;
+
           resumeAudio();
+
           msg.textContent = "Playing: " + file.name;
+
         } else {
+
           msg.textContent = "Could not load that ROM.";
+
         }
+
       });
+
     }
 
     romInput.addEventListener("change", function (e) {
+
       var file = e.target.files[0];
-      if (file) startRom(file);
+
+      if (file) {
+        startRom(file);
+      }
+
     });
 
-    // Import save
+    // IMPORT SAVE FILE
+
     document.getElementById("importSave")
       .addEventListener("change", function (e) {
 
         var file = e.target.files[0];
+
         if (!file) return;
 
         if (!emu.loadSavedataFromFile) {
+
           msg.textContent = "This build can't import saves.";
+
           return;
+
         }
 
         emu.loadSavedataFromFile(file);
+
         msg.textContent =
           "Save imported. If the game doesn't show it, press Reset game.";
+
       });
 
-    // Export save
+    // EXPORT SAVE FILE
+
     document.getElementById("exportBtn")
       .addEventListener("click", function () {
 
         if (!emu.downloadSavedata) {
+
           msg.textContent = "This build can't export saves.";
+
           return;
+
         }
 
         emu.downloadSavedata();
+
         msg.textContent =
           "Save exported. Check your Downloads folder.";
+
       });
 
-    // Reset game
+    // RESET GAME
+
     document.getElementById("resetBtn")
       .addEventListener("click", function () {
 
-        if (currentFile) startRom(currentFile);
-        else msg.textContent = "Load a ROM first.";
+        if (currentFile) {
+
+          startRom(currentFile);
+
+        } else {
+
+          msg.textContent = "Load a ROM first.";
+
+        }
 
       });
 
-    // Speed control
+    // SPEED CONTROL
+
     setInterval(function () {
 
       if (speed > 1 && running && !emu.paused) {
+
         try {
-          for (var i = 1; i < speed; i++)
+
+          for (var i = 1; i < speed; i++) {
             emu.advanceFrame();
+          }
+
         } catch (err) {}
+
       }
 
     }, 16);
@@ -348,12 +463,15 @@
       .addEventListener("click", function () {
 
         speed = speed >= 4 ? 1 : speed + 1;
+
         this.textContent = "Speed: " + speed + "x";
+
         this.blur();
 
       });
 
   })();
+
   </script>
 
 </body>
