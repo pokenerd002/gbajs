@@ -432,24 +432,45 @@
 
     // EXPORT SAVE
 
-    document.getElementById("exportBtn")
-      .addEventListener("click", function () {
+// EXPORT SAVE FILE (.sav)
 
-        if (!emu.downloadSavedata) {
+document.getElementById("exportBtn")
+  .addEventListener("click", function () {
 
-          msg.textContent = "This build can't export saves.";
+    if (!emu.mmu || !emu.mmu.save) {
+      msg.textContent = "No save data available.";
+      return;
+    }
 
-          return;
+    var saveData = emu.mmu.save;
 
-        }
+    var blob = new Blob(
+      [saveData.buffer],
+      { type: "application/octet-stream" }
+    );
 
-        emu.downloadSavedata();
+    var url = URL.createObjectURL(blob);
 
-        msg.textContent =
-          "Save exported. Check your Downloads folder.";
+    var filename = currentFile
+      ? currentFile.name.replace(/\.[^.]+$/, "") + ".sav"
+      : "game.sav";
 
-      });
+    var link = document.createElement("a");
 
+    link.href = url;
+    link.download = filename;
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    setTimeout(function () {
+      URL.revokeObjectURL(url);
+    }, 1000);
+
+    msg.textContent = "Save exported as " + filename;
+
+  });
     // RESET GAME
 
     document.getElementById("resetBtn")
