@@ -61,29 +61,44 @@
       cursor: pointer;
     }
 
-    /* FULLSCREEN */
+    /* FULLSCREEN SETTINGS */
 
     #holder:fullscreen {
-      background: #000;
+      position: fixed;
+      inset: 0;
+
       width: 100vw;
-      height: 100vh;
+      height: 100vh !important;
+
+      background: #000;
+
       display: flex;
       justify-content: center;
       align-items: center;
+
       overflow: hidden;
     }
 
     #holder:fullscreen #wrap {
       width: min(100vw, 150vh);
       height: auto;
+
+      aspect-ratio: 3 / 2;
+
       margin: 0;
+
       transform: none !important;
+
+      flex: none;
     }
 
     #holder:fullscreen canvas {
       width: 100%;
-      height: auto;
-      aspect-ratio: 3 / 2;
+      height: 100%;
+
+      display: block;
+
+      image-rendering: pixelated;
     }
 
   </style>
@@ -92,6 +107,7 @@
     window.__errors = [];
 
     window.addEventListener("error", function (e) {
+
       var text = e.target && e.target.src
         ? "Failed to load: " + e.target.src
         : "Error: " + e.message + " (line " + e.lineno + ")";
@@ -103,8 +119,11 @@
       if (box) {
         box.textContent = window.__errors.join("\n");
       }
+
     }, true);
   </script>
+
+  <!-- EMULATOR FILES -->
 
   <script src="resources/xhr.js"></script>
   <script src="js/util.js"></script>
@@ -157,6 +176,8 @@
 
   </div>
 
+  <!-- GAME SCREEN -->
+
   <div id="holder">
 
     <div id="wrap">
@@ -191,13 +212,18 @@
 
       if (document.fullscreenElement === holder) {
 
-        wrap.style.width = "min(100vw, 150vh)";
-        wrap.style.height = "auto";
+        // Fullscreen uses CSS centering.
+        // Do not apply JavaScript scaling here.
+
         wrap.style.transform = "none";
+        wrap.style.width = "";
+        wrap.style.height = "";
 
         holder.style.height = "100vh";
 
       } else {
+
+        // Normal screen sizing
 
         wrap.style.width = "240px";
         wrap.style.height = "160px";
@@ -238,7 +264,7 @@
 
     });
 
-    // DETECT FULLSCREEN CHANGES
+    // FULLSCREEN CHANGE DETECTION
 
     document.addEventListener("fullscreenchange", function () {
 
@@ -380,7 +406,7 @@
 
     });
 
-    // IMPORT SAVE FILE
+    // IMPORT SAVE
 
     document.getElementById("importSave")
       .addEventListener("change", function (e) {
@@ -404,7 +430,7 @@
 
       });
 
-    // EXPORT SAVE FILE
+    // EXPORT SAVE
 
     document.getElementById("exportBtn")
       .addEventListener("click", function () {
