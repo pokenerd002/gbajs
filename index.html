@@ -7,9 +7,9 @@
   <style>
     body { margin:0; background:#111; color:#eee; font-family:sans-serif; text-align:center; }
     #bar { padding:12px; }
- #holder { width:100%; }
-#wrap { width:240px; height:160px; margin:0 auto; transform-origin:top center; }
-canvas { width:240px; height:160px; display:block; image-rendering:pixelated; background:#000; }
+    #holder { width:100%; }
+    #wrap { width:240px; height:160px; margin:0 auto; transform-origin:top center; }
+    canvas { width:240px; height:160px; display:block; image-rendering:pixelated; background:#000; }
     #msg { font-size:14px; opacity:.7; padding:6px; }
   </style>
 
@@ -36,9 +36,9 @@ canvas { width:240px; height:160px; display:block; image-rendering:pixelated; ba
     <input type="file" id="rom" accept=".gba,.bin">
     <div id="msg">Loading BIOS...</div>
   </div>
-<div id="holder"><div id="wrap">
-  <canvas id="screen" width="240" height="160"></canvas>
-</div></div>
+  <div id="holder"><div id="wrap">
+    <canvas id="screen" width="240" height="160"></canvas>
+  </div></div>
 
   <script>
     const msg = document.getElementById("msg");
@@ -64,54 +64,44 @@ canvas { width:240px; height:160px; display:block; image-rendering:pixelated; ba
       })
       .catch(err => { msg.textContent = "BIOS error: " + err.message; });
 
+    function resumeAudio() {
+      try {
+        if (gba && gba.audio && gba.audio.context && gba.audio.context.state === "suspended") {
+          gba.audio.context.resume();
+        }
+      } catch (err) { console.log("Audio resume failed:", err); }
+    }
+
     document.getElementById("rom").addEventListener("change", e => {
       const file = e.target.files[0];
       if (!file || !gba) return;
-      document.getElementById("rom").addEventListener("change", e => {
-  const file = e.target.files[0];
-  if (!file || !gba) return;
 
-  // --- audio fix ---
-  try {
-    if (gba.audio && gba.audio.context && gba.audio.context.state === "suspended") {
-      gba.audio.context.resume();
-    }
-  } catch (err) { console.log("Audio resume failed:", err); }
-  // -----------------
-
-  gba.reset();
-  …
-
+      resumeAudio();
       gba.reset();
       gba.loadRomFromFile(file, ok => {
         if (ok) {
           gba.runStable();
+          resumeAudio();
           msg.textContent = "Playing: " + file.name;
         } else {
           msg.textContent = "Could not load that ROM.";
         }
       });
     });
-    const wrap = document.getElementById("wrap");
-const holder = document.getElementById("holder");
-function fit() {
-  const s = Math.min(window.innerWidth / 240, 3);
-  wrap.style.transform = "scale(" + s + ")";
-  holder.style.height = (160 * s) + "px";
-}
-fit();
-["click", "touchstart", "keydown"].forEach(ev =>
-  document.addEventListener(ev, () => {
-    try {
-      if (gba && gba.audio && gba.audio.context && gba.audio.context.state === "suspended") {
-        gba.audio.context.resume();
-      }
-    } catch (err) {}
-  })
-);
 
-window.addEventListener("resize", fit);
+    ["click", "touchstart", "keydown"].forEach(ev =>
+      document.addEventListener(ev, resumeAudio)
+    );
+
+    const wrap = document.getElementById("wrap");
+    const holder = document.getElementById("holder");
+    function fit() {
+      const s = Math.min(window.innerWidth / 240, 3);
+      wrap.style.transform = "scale(" + s + ")";
+      holder.style.height = (160 * s) + "px";
+    }
+    fit();
+    window.addEventListener("resize", fit);
   </script>
 </body>
 </html>
-
