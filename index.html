@@ -7,6 +7,7 @@
   <style>
     body { margin:0; background:#111; color:#eee; font-family:sans-serif; text-align:center; }
     #bar { padding:12px; }
+    #bar > div { margin:6px 0; }
     #holder { width:100%; }
     #wrap { width:240px; height:160px; margin:0 auto; transform-origin:top center; }
     canvas { width:240px; height:160px; display:block; image-rendering:pixelated; background:#000; }
@@ -15,7 +16,6 @@
   </style>
 
   <script>
-    // Shows any script error or missing file on the page itself
     window.__errors = [];
     window.addEventListener("error", function (e) {
       var text = e.target && e.target.src
@@ -47,14 +47,23 @@
 </head>
 <body>
   <div id="bar">
-    <input type="file" id="rom" accept=".gba,.bin">
     <div>
-  <label>Import save (.sav): <input type="file" id="importSave" accept=".sav,.sa1,.bin"></label>
-</div>
-    <button id="resetBtn">Reset game</button>
+      <label>ROM: <input type="file" id="rom" accept=".gba,.bin"></label>
+    </div>
+
+    <div>
+      <label>Import save (.sav): <input type="file" id="importSave" accept=".sav,.sa1,.bin"></label>
+    </div>
+
+    <div>
+      <button id="exportBtn">Export save</button>
+      <button id="resetBtn">Reset game</button>
+    </div>
+
     <div id="msg">Loading BIOS...</div>
     <div id="err"></div>
   </div>
+
   <div id="holder"><div id="wrap">
     <canvas id="screen" width="240" height="160"></canvas>
   </div></div>
@@ -73,7 +82,7 @@
 
     // Screen scaling
     function fit() {
-      var s = Math.min(window.innerWidth / 240, 2);
+      var s = Math.min(window.innerWidth / 240, 3);
       wrap.style.transform = "scale(" + s + ")";
       holder.style.height = (160 * s) + "px";
     }
@@ -132,19 +141,34 @@
         }
       });
     });
+
+    // Import a save file
     document.getElementById("importSave").addEventListener("change", function (e) {
-  var file = e.target.files[0];
-  if (!file) return;
-  if (!emu || !emu.loadSavedataFromFile) {
-    msg.textContent = "This build can't import saves.";
-    return;
-  }
-  emu.loadSavedataFromFile(file);
-  msg.textContent = "Save imported. If the game doesn't show it, press Reset below.";
-});
-document.getElementById("resetBtn").addEventListener("click", function () {
-  if (emu) { emu.reset(); emu.runStable(); }
-});
+      var file = e.target.files[0];
+      if (!file) return;
+      if (!emu.loadSavedataFromFile) {
+        msg.textContent = "This build can't import saves.";
+        return;
+      }
+      emu.loadSavedataFromFile(file);
+      msg.textContent = "Save imported. If the game doesn't show it, press Reset game.";
+    });
+
+    // Export the current save as a file
+    document.getElementById("exportBtn").addEventListener("click", function () {
+      if (!emu.downloadSavedata) {
+        msg.textContent = "This build can't export saves.";
+        return;
+      }
+      emu.downloadSavedata();
+      msg.textContent = "Save exported. Check your Downloads folder.";
+    });
+
+    // Reset the game
+    document.getElementById("resetBtn").addEventListener("click", function () {
+      emu.reset();
+      emu.runStable();
+    });
   })();
   </script>
 </body>
