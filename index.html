@@ -67,6 +67,21 @@ canvas { width:240px; height:160px; display:block; image-rendering:pixelated; ba
     document.getElementById("rom").addEventListener("change", e => {
       const file = e.target.files[0];
       if (!file || !gba) return;
+      document.getElementById("rom").addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (!file || !gba) return;
+
+  // --- audio fix ---
+  try {
+    if (gba.audio && gba.audio.context && gba.audio.context.state === "suspended") {
+      gba.audio.context.resume();
+    }
+  } catch (err) { console.log("Audio resume failed:", err); }
+  // -----------------
+
+  gba.reset();
+  …
+
       gba.reset();
       gba.loadRomFromFile(file, ok => {
         if (ok) {
