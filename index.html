@@ -243,6 +243,17 @@ header {
   overflow-y: auto;
 }
 
+.library-row {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+}
+
+.library-row .library-item {
+  flex: 1;
+  min-width: 0;
+}
+
 .library-item {
   width: 100%;
   text-align: left;
@@ -268,6 +279,18 @@ header {
   display: block;
   color: var(--muted);
   margin-top: 5px;
+}
+
+.library-del {
+  background: #2a1a2e;
+  border: 1px solid var(--border);
+  color: #ff9db5;
+  border-radius: 9px;
+  width: 36px;
+}
+
+.library-del:hover {
+  border-color: #ff6b8a;
 }
 
 .empty {
@@ -370,7 +393,7 @@ window.__errors = [];
 window.addEventListener("error", function(e) {
   var text = e.target && e.target.src
     ? "Failed to load: " + e.target.src
-    : "Error: " + e.message + " (line " + e.lineno + ")";
+    : "Error: " + e.message + " (" + (e.filename || "page").split("/").pop() + ", line " + e.lineno + ")";
 
   window.__errors.push(text);
 
@@ -558,7 +581,7 @@ window.addEventListener("error", function(e) {
   var speed = 1;
   var biosReady = false;
 
-  // Session game library
+  // Game library (saved in this browser)
   var games = [];
 
   if (window.__errors.length) {
@@ -677,7 +700,7 @@ window.addEventListener("error", function(e) {
 
       biosReady = true;
 
-      msg.textContent = "BIOS loaded. Add a GBA game to begin.";
+      msg.textContent = "BIOS loaded. Add a GBA game or pick one from your library.";
 
     })
 
@@ -687,48 +710,94 @@ window.addEventListener("error", function(e) {
 
     });
 
-  // GAME LIBRARY
+  // GAME LIBRARY (saved in this browser)
+
+  var db = null;
+  var currentId = null;
+
+  function openDB(done) {
+    if (!window.indexedDB) { done(); return; }
+    var req = indexedDB.open("neon-gba", 1);
+    req.onupgradeneeded = function() {
+      req.result.createObjectStore("games", { keyPath: "id" });
+    };
+    req.onsuccess = function() { db = req.result; done(); };
+    req.onerror = function() { done(); };
+  }
+
+  function dbGetAll(done) {
+    if (!db) { done([]); return; }
+    var req = db.transaction("games", "readonly").objectStore("games").getAll();
+    req.onsuccess = function() { done(req.result || []); };
+    req.onerror = function() { done([]); };
+  }
+
+  function dbPut(rec) {
+    if (!db) return;
+    try {
+      db.transaction("games", "readwrite").objectStore("games").put(rec);
+    } catch(err) {}
+  }
+
+  function dbDelete(id) {
+    if (!db) return;
+    try {
+      db.transaction("games", "readwrite").objectStore("games").delete(id);
+    } catch(err) {}
+  }
 
   function renderLibrary() {
 
     libraryList.innerHTML = "";
 
     if (games.length === 0) {
-
       var empty = document.createElement("div");
       empty.className = "empty";
       empty.textContent = "Your library is empty. Add a GBA game to get started.";
-
       libraryList.appendChild(empty);
       return;
-
     }
 
-    games.forEach(function(file) {
+    games.sort(function(a, b) { return b.lastPlayed - a.lastPlayed; });
+
+    games.forEach(function(rec) {
+
+      var row = document.createElement("div");
+      row.className = "library-row";
 
       var item = document.createElement("button");
-
       item.className = "library-item";
-
-      if (currentFile === file) {
-        item.classList.add("active");
-      }
+      if (currentId === rec.id) item.classList.add("active");
 
       var title = document.createElement("strong");
-      title.textContent = file.name;
+      title.textContent = rec.name;
 
       var subtitle = document.createElement("small");
       subtitle.textContent =
-        (file.size / 1024).toFixed(1) + " KB · GBA ROM";
+        (rec.size / 1048576).toFixed(1) + " MB · Last played " +
+        new Date(rec.lastPlayed).toLocaleDateString();
 
       item.appendChild(title);
       item.appendChild(subtitle);
 
       item.addEventListener("click", function() {
-        startRom(file);
+        startRom(new File([rec.blob], rec.name), rec.id);
       });
 
-      libraryList.appendChild(item);
+      var del = document.createElement("button");
+      del.className = "library-del";
+      del.textContent = "✕";
+      del.title = "Remove from library";
+      del.addEventListener("click", function() {
+        if (!confirm("Remove " + rec.name + " from your library?")) return;
+        games = games.filter(function(g) { return g.id !== rec.id; });
+        dbDelete(rec.id);
+        renderLibrary();
+      });
+
+      row.appendChild(item);
+      row.appendChild(del);
+      libraryList.appendChild(row);
 
     });
 
@@ -736,24 +805,21 @@ window.addEventListener("error", function(e) {
 
   // LOAD ROM
 
-  function startRom(file) {
+  function startRom(file, id) {
 
     if (!biosReady) {
       msg.textContent = "Please wait for the BIOS to finish loading.";
       return;
     }
 
+    id = id || (file.name + "|" + file.size);
+
     running = false;
 
     resumeAudio();
 
-    try {
-      emu.pause();
-    } catch(err) {}
-
-    try {
-      emu.reset();
-    } catch(err) {}
+    try { emu.pause(); } catch(err) {}
+    try { emu.reset(); } catch(err) {}
 
     msg.textContent = "Loading " + file.name + "...";
 
@@ -762,6 +828,7 @@ window.addEventListener("error", function(e) {
       if (ok) {
 
         currentFile = file;
+        currentId = id;
 
         emu.runStable();
 
@@ -772,6 +839,12 @@ window.addEventListener("error", function(e) {
         gameName.textContent = file.name;
 
         msg.textContent = "Playing: " + file.name;
+
+        var rec = games.filter(function(g) { return g.id === id; })[0];
+        if (rec) {
+          rec.lastPlayed = Date.now();
+          dbPut(rec);
+        }
 
         renderLibrary();
 
@@ -791,23 +864,41 @@ window.addEventListener("error", function(e) {
 
     if (!file) return;
 
-    var alreadyAdded = games.some(function(existing) {
-      return existing.name === file.name &&
-        existing.size === file.size;
-    });
+    var id = file.name + "|" + file.size;
 
-    if (!alreadyAdded) {
-      games.push(file);
+    var exists = games.some(function(g) { return g.id === id; });
+
+    if (!exists) {
+      var rec = {
+        id: id,
+        name: file.name,
+        size: file.size,
+        lastPlayed: Date.now(),
+        blob: file
+      };
+      games.push(rec);
+      dbPut(rec);
     }
 
     renderLibrary();
 
-    startRom(file);
+    startRom(file, id);
 
-    // Allow selecting the same file again
     romInput.value = "";
 
   });
+
+  // Load the saved library when the page opens
+  openDB(function() {
+    dbGetAll(function(list) {
+      games = list;
+      renderLibrary();
+    });
+  });
+
+  if (navigator.storage && navigator.storage.persist) {
+    navigator.storage.persist();
+  }
 
   // IMPORT SAVE
 
@@ -894,6 +985,7 @@ window.addEventListener("error", function(e) {
       }
 
     });
+
   // RESET GAME
 
   document.getElementById("resetBtn")
@@ -901,7 +993,7 @@ window.addEventListener("error", function(e) {
 
       if (currentFile) {
 
-        startRom(currentFile);
+        startRom(currentFile, currentId);
 
       } else {
 
