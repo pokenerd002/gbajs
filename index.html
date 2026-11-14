@@ -843,35 +843,57 @@ window.addEventListener("error", function(e) {
     });
 
   // EXPORT SAVE
-  // Uses the emulator's built-in save-data exporter.
 
   document.getElementById("exportBtn")
     .addEventListener("click", function() {
 
-      if (!emu.downloadSavedata) {
+      var sram = emu && emu.mmu ? emu.mmu.save : null;
 
-        saveMsg.textContent = "This build can't export saves.";
+      if (!sram || !sram.buffer) {
+
+        saveMsg.textContent =
+          "No save data yet. Save inside the game first, then try again.";
 
         return;
 
       }
 
+      var base = currentFile
+        ? currentFile.name.replace(/\.[^.]+$/, "")
+        : "game";
+
+      var filename = base + ".sav";
+
       try {
 
-        emu.downloadSavedata();
+        var blob = new Blob([sram.buffer], {
+          type: "application/octet-stream"
+        });
 
-        saveMsg.textContent =
-          "Save export requested. Check your Downloads folder.";
+        var url = URL.createObjectURL(blob);
+        var link = document.createElement("a");
+
+        link.href = url;
+        link.download = filename;
+        link.style.display = "none";
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        setTimeout(function() {
+          URL.revokeObjectURL(url);
+        }, 1000);
+
+        saveMsg.textContent = "Exported: " + filename;
 
       } catch(err) {
 
-        saveMsg.textContent =
-          "Save export failed: " + err.message;
+        saveMsg.textContent = "Save export failed: " + err.message;
 
       }
 
     });
-
   // RESET GAME
 
   document.getElementById("resetBtn")
