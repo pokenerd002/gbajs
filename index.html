@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -113,8 +112,6 @@ header {
 
 #gameFrame {
   width: min(720px, 100%);
-  aspect-ratio: 3 / 2;
-  height: auto;
   flex: 0 1 auto;
   margin: auto;
   padding: 10px;
@@ -126,13 +123,30 @@ header {
     0 0 35px rgba(56,189,248,.15);
 }
 
+#gameScaler {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  overflow: hidden;
+  background: #000;
+}
+
+#gameWrap {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 240px;
+  height: 160px;
+  transform-origin: top left;
+}
+
 #screen {
   display: block;
-  width: 100%;
-  height: 100%;
+  width: 240px !important;
+  height: 160px !important;
+  max-width: none !important;
   background: #000;
   image-rendering: pixelated;
-  image-rendering: crisp-edges;
 }
 
 /* Fullscreen centers the 3:2 game frame in the full browser viewport. */
@@ -157,21 +171,11 @@ header {
 
 #gameStage:fullscreen #gameFrame,
 #gameStage:-webkit-full-screen #gameFrame {
-  width: min(1100px, calc(100vw - 32px), calc((100vh - 32px) * 1.5));
-  height: auto;
-  max-height: calc(100vh - 32px);
-  aspect-ratio: 3 / 2;
+  width: min(1100px, calc(100vw - 32px), calc((100vh - 56px) * 1.5));
   padding: 8px;
   flex: 0 1 auto;
   margin: auto;
   border-radius: 12px;
-}
-
-#gameStage:fullscreen #screen,
-#gameStage:-webkit-full-screen #screen {
-  display: block;
-  width: 100%;
-  height: 100%;
 }
 
 .controls {
@@ -414,7 +418,11 @@ window.addEventListener("error", function(e) {
 
       <div class="game-stage" id="gameStage">
         <div id="gameFrame">
-          <canvas id="screen" width="240" height="160"></canvas>
+          <div id="gameScaler">
+            <div id="gameWrap">
+              <canvas id="screen" width="240" height="160"></canvas>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -536,6 +544,8 @@ window.addEventListener("error", function(e) {
   var errBox = document.getElementById("err");
   var canvas = document.getElementById("screen");
   var stage = document.getElementById("gameStage");
+  var scaler = document.getElementById("gameScaler");
+  var wrap = document.getElementById("gameWrap");
   var romInput = document.getElementById("rom");
 
   var libraryList = document.getElementById("libraryList");
@@ -553,6 +563,27 @@ window.addEventListener("error", function(e) {
 
   if (window.__errors.length) {
     errBox.textContent = window.__errors.join("\n");
+  }
+
+  // SCREEN SCALING
+
+  function fit() {
+    var w = scaler.clientWidth;
+    if (!w) return;
+    wrap.style.transform = "scale(" + (w / 240) + ")";
+  }
+
+  fit();
+
+  window.addEventListener("resize", fit);
+
+  document.addEventListener("fullscreenchange", function() {
+    fit();
+    setTimeout(fit, 100);
+  });
+
+  if (window.ResizeObserver) {
+    new ResizeObserver(fit).observe(scaler);
   }
 
   // AUDIO UNLOCK
